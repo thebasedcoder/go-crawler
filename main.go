@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -65,9 +67,21 @@ var inputBody = `
 </html>
 `
 
-var rawUrl = "https://google.com"
-
 func main() {
+	args := os.Args[1:]
+	if len(args) < 1 {
+		slog.Warn("no url provided", "u", "NONE")
+		os.Exit(1)
+	}
+	if len(args) > 1 {
+		slog.Warn("TOo many args", "required argument", "u")
+		os.Exit(1)
+	}
+	rawUrl := os.Args[1]
+
+	fmt.Println("-------------------------")
+	slog.Info("Starting the crawl", "Target", rawUrl)
+	fmt.Println("-------------------------")
 	urls, err := getURLsFromHTML(inputBody, rawUrl)
 	if err != nil {
 		fmt.Println(err)
