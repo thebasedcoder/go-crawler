@@ -2,15 +2,52 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 )
+
+func getHTML(rawURL string) (string, error) {
+	tr := &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    60 * time.Second,
+		DisableCompression: true,
+	}
+	client := &http.Client{
+		Transport: tr,
+	}
+
+	resp, err := client.Get(rawURL)
+	if err != nil {
+		slog.Error("Operation failed", "error", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode > 400 {
+		slog.Error("status code error", "code", resp.StatusCode, "url", resp.Request.URL)
+		return "", fmt.Errorf("failed with status code of: %d", resp.StatusCode)
+	}
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		slog.Error("Unexpected content type", "content-type", contentType)
+		return "", fmt.Errorf("Unexpected content-type: %s, expexted text/html", contentType)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("Operation failed", "error", err)
+		return "", err
+	}
+	return string(body), nil
+
+}
 
 func realtiveToAbs(relativePath, rootUrl string) (absUrl string) {
 	root := strings.TrimSuffix(rootUrl, "/")
@@ -79,6 +116,11 @@ func main() {
 	}
 	rawUrl := os.Args[1]
 
+	body, err := getHTML(rawUrl)
+	if err != nil {
+		os.Exit(1)
+	}
+	fmt.Println(body)
 	fmt.Println("-------------------------")
 	slog.Info("Starting the crawl", "Target", rawUrl)
 	fmt.Println("-------------------------")
