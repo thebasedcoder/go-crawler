@@ -109,10 +109,16 @@ func getHTML(rawURL string) (string, error) {
 
 }
 
-func realtiveToAbs(relativePath, rootUrl string) (absUrl string) {
-	root := strings.TrimSuffix(rootUrl, "/")
-	absUrl = root + relativePath
-	return
+func relativeToAbs(relativePath, rootUrl string) string {
+	base, err := url.Parse(rootUrl)
+	if err != nil {
+		return ""
+	}
+	ref, err := url.Parse(relativePath)
+	if err != nil {
+		return ""
+	}
+	return base.ResolveReference(ref).String()
 }
 
 func normalizeURL(rawUrl string) (string, error) {
