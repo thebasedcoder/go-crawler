@@ -115,15 +115,15 @@ func realtiveToAbs(relativePath, rootUrl string) (absUrl string) {
 	return
 }
 
-func normalizeURL(rawUrl string) (result string, err error) {
-	actual, err := url.Parse(rawUrl)
+func normalizeURL(rawUrl string) (string, error) {
+	parsed, err := url.Parse(rawUrl)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
-	host := actual.Host
-	path := strings.TrimSuffix(actual.Path, "/")
-	result = host + path
-	return result, nil
+	parsed.Fragment = ""
+	parsed.RawQuery = ""
+	parsed.Path = strings.TrimSuffix(parsed.Path, "/")
+	return parsed.String(), nil
 }
 
 func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
