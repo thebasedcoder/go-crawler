@@ -32,6 +32,7 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 	if curr.Host != base.Host {
 		return
 	}
+	fmt.Printf("Crawling the url: %s\n", rawCurrentURL)
 	normCurr, err := normalizeURL(rawCurrentURL)
 
 	if _, exists := (*pages)[normCurr]; exists {
@@ -48,7 +49,11 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 	currPageURLs, err := getURLsFromHTML(currBody, rawBaseURL)
 	if err != nil {
 		slog.Error("Error while parsing HTML", "URL", rawCurrentURL)
+
 		return
+	}
+	for _, v := range currPageURLs {
+		fmt.Printf("founde: %s\n", v)
 	}
 	for _, v := range currPageURLs {
 		norm, err := normalizeURL(v)
