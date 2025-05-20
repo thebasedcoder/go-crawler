@@ -35,21 +35,21 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 		return
 	}
 
-	//normalize the rawCurrentURL
+	// //normalize the rawCurrentURL
 
-	normCurr, err := normalizeURL(rawCurrentURL)
-	if err != nil {
-		slog.Error("Normalizing error", "error", err)
-		return
-	}
-	fmt.Printf("---- normalized version of the current url: %s\n ----", normCurr)
-	//Check if we've already crawled the rawCurrentURL
+	// normCurr, err := normalizeURL(rawCurrentURL)
+	// if err != nil {
+	// 	slog.Error("Normalizing error", "error", err)
+	// 	return
+	// }
+	// fmt.Printf("---- normalized version of the current url: %s\n ----", normCurr)
+	// //Check if we've already crawled the rawCurrentURL
 
-	if _, exists := (*pages)[normCurr]; exists {
-		(*pages)[normCurr]++
+	if _, exists := (*pages)[rawCurrentURL]; exists {
+		(*pages)[rawCurrentURL]++
 		return
 	} else {
-		(*pages)[normCurr] = 1
+		(*pages)[rawCurrentURL] = 1
 	}
 
 	currBody, err := getHTML(rawCurrentURL)
@@ -58,7 +58,7 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 	}
 	currPageURLs, err := getURLsFromHTML(currBody, rawBaseURL)
 	if err != nil {
-		slog.Error("Error while parsing HTML", "URL", normCurr)
+		slog.Error("Error while parsing HTML", "URL", rawCurrentURL)
 		return
 	}
 	for _, v := range currPageURLs {
