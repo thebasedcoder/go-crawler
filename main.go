@@ -15,6 +15,63 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+//crawl page func
+
+func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]string) {
+	//makeing sure were crawling the same domain
+
+	base, err := url.Parse(rawBaseURL)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	curr, err := url.Parse(rawCurrentURL)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	if curr.Host != base.Host {
+		return
+	}
+
+	//normalize the rawCurrentURL
+
+	normCurr, err := normalizeURL(rawCurrentURL)
+	if err != nil {
+		slog.Error("Normalizing error", "error", err)
+		return
+	}
+
+	//Check if we've already crawled the rawCurrentURL
+
+	if _, exists := (*pages)[normCurr]; exists {
+		(*pages)[normCurr]++
+		return
+	} else {
+		(*pages)[normCurr] = 1
+	}
+
+	currBody, err := getHTML(rawCurrentURL)
+	if err != nil {
+		slog.Error("Error while getting the page", "error", err, "url", rawCurrentURL)
+	}
+	currPageURLs, err := getURLsFromHTML(currBody, rawBaseURL)
+	if err != nil {
+		slog.Error("Error while parsing HTML", "URL", normCurr)
+		return
+	}
+	for _, v := range currPageURLs {
+		fmt.Printf("extracted link: %s \n", v)
+	}
+	*pool = append(*pool, currPageURLs...)
+	*pool = (*pool)[1:]
+	newCurrUrl := (*pool)[0]
+	crawlPage(rawBaseURL, newCurrUrl, pages, pool)
+}
+
+//crawl page func
+
 func getHTML(rawURL string) (string, error) {
 	tr := &http.Transport{
 		MaxIdleConns:       10,
@@ -71,6 +128,7 @@ func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
 	doc, err := html.Parse(strings.NewReader(htmlBody))
 	if err != nil {
 		log.Fatal(err)
+		return []string{}, err
 	}
 	for n := range doc.Descendants() {
 		if n.Type == html.ElementNode && n.DataAtom == atom.A {
@@ -91,19 +149,6 @@ func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
 	return urls, nil
 }
 
-var inputBody = `
-<html>
-        <body>
-                <a href="/path/one">
-                        <span>Boot.dev</span>
-                </a>
-                <a href="https://other.com/path/one">
-                        <span>Boot.dev</span>
-                </a>
-        </body>
-</html>
-`
-
 func main() {
 	args := os.Args[1:]
 	if len(args) < 1 {
@@ -116,26 +161,16 @@ func main() {
 	}
 	rawUrl := os.Args[1]
 
-	body, err := getHTML(rawUrl)
-	if err != nil {
-		os.Exit(1)
-	}
-	fmt.Println(body)
 	fmt.Println("-------------------------")
 	slog.Info("Starting the crawl", "Target", rawUrl)
 	fmt.Println("-------------------------")
-	urls, err := getURLsFromHTML(inputBody, rawUrl)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	for _, u := range urls {
-		norm, err := normalizeURL(u)
-		if err != nil {
-			fmt.Printf("Error normalizing %s: %v\n", u, err)
-			continue
-		}
-		fmt.Printf("%-25s => %s\n", u, norm)
-	}
 
+	urls := []string{rawUrl}
+	rawCurrentUrl := urls[0]
+	pages := make(map[string]int)
+	crawlPage(rawUrl, rawCurrentUrl, &pages, &urls)
+	for key, value := range pages {
+		fmt.Printf("the %s seen %d", key, value)
+	}
+	slog.Info("finnished execution", "status", "success")
 }
