@@ -18,8 +18,6 @@ import (
 //crawl page func
 
 func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]string) {
-	//makeing sure were crawling the same domain
-
 	base, err := url.Parse(rawBaseURL)
 	if err != nil {
 		log.Fatal(err)
@@ -34,22 +32,13 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 	if curr.Host != base.Host {
 		return
 	}
+	normCurr, err := normalizeURL(rawCurrentURL)
 
-	// //normalize the rawCurrentURL
-
-	// normCurr, err := normalizeURL(rawCurrentURL)
-	// if err != nil {
-	// 	slog.Error("Normalizing error", "error", err)
-	// 	return
-	// }
-	// fmt.Printf("---- normalized version of the current url: %s\n ----", normCurr)
-	// //Check if we've already crawled the rawCurrentURL
-
-	if _, exists := (*pages)[rawCurrentURL]; exists {
-		(*pages)[rawCurrentURL]++
+	if _, exists := (*pages)[normCurr]; exists {
+		(*pages)[normCurr]++
 		return
 	} else {
-		(*pages)[rawCurrentURL] = 1
+		(*pages)[normCurr] = 1
 	}
 
 	currBody, err := getHTML(rawCurrentURL)
@@ -62,15 +51,17 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 		return
 	}
 	for _, v := range currPageURLs {
-		fmt.Printf("extracted link: %s \n", v)
+		norm, err := normalizeURL(v)
+		if err == nil {
+			*pool = append(*pool, norm)
+		}
 	}
-	*pool = append(*pool, currPageURLs...)
 	*pool = (*pool)[1:]
 	if len(*pool) == 0 {
 		return
 	}
-	newCurrUrl := (*pool)[0]
-	crawlPage(rawBaseURL, newCurrUrl, pages, pool)
+	nextURL := (*pool)[0]
+	crawlPage(rawBaseURL, nextURL, pages, pool)
 }
 
 //crawl page func
@@ -132,29 +123,36 @@ func normalizeURL(rawUrl string) (string, error) {
 	return parsed.String(), nil
 }
 
+func extractLinks(n *html.Node, base string, urls *[]string) {
+	if n.Type == html.ElementNode && n.DataAtom == atom.A {
+		for _, a := range n.Attr {
+			if a.Key == "href" {
+				var abs string
+				if strings.HasPrefix(a.Val, "/") || strings.HasPrefix(a.Val, "./") {
+					abs = relativeToAbs(a.Val, base)
+				} else if strings.HasPrefix(a.Val, "http") {
+					abs = a.Val
+				}
+				if abs != "" {
+					*urls = append(*urls, abs)
+				}
+				break
+			}
+		}
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		extractLinks(c, base, urls)
+	}
+}
+
 func getURLsFromHTML(htmlBody, rawBaseURL string) ([]string, error) {
-	urls := []string{}
 	doc, err := html.Parse(strings.NewReader(htmlBody))
 	if err != nil {
 		log.Fatal(err)
 		return []string{}, err
 	}
-	for n := range doc.Descendants() {
-		if n.Type == html.ElementNode && n.DataAtom == atom.A {
-			for _, a := range n.Attr {
-				if a.Key == "href" {
-					if strings.HasPrefix(a.Val, "/") {
-						url := realtiveToAbs(a.Val, rawBaseURL)
-						urls = append(urls, url)
-						break
-					} else {
-						urls = append(urls, a.Val)
-						break
-					}
-				}
-			}
-		}
-	}
+	var urls []string
+	extractLinks(doc, rawBaseURL, &urls)
 	return urls, nil
 }
 
