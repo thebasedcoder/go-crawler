@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 )
 
@@ -13,15 +14,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	rawURL := args[0]
-
+	startURL := args[0]
+	rawURL, err := url.Parse(startURL)
+	if err != nil {
+		panic("Invalid start URL")
+	}
 	slog.Info("Starting crawl", "url", rawURL)
 	fmt.Println("-------------------------")
 
-	urls := []string{rawURL}
+	urls := []string{startURL}
 	pages := make(map[string]int)
 
-	crawlPage(rawURL, rawURL, &pages, &urls)
+	crawlPage(startURL, startURL, &pages, &urls)
 
 	fmt.Println("\n--- Crawl Report ---")
 	for url, count := range pages {

@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]string) {
+func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, urls *[]string) {
 	base, err := url.Parse(rawBaseURL)
 	if err != nil {
 		slog.Error("Invalid base URL", "error", err)
@@ -47,9 +47,6 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 	}
 
 	for _, link := range links {
-		fmt.Printf("found: %s\n", link)
-	}
-	for _, link := range links {
 		norm, err := normalizeURL(link)
 		if err != nil {
 			continue
@@ -59,17 +56,17 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 			continue
 		}
 		if _, seen := (*pages)[norm]; !seen {
-			*pool = append(*pool, norm)
+			*urls = append(*urls, norm)
 		}
 	}
 
-	*pool = (*pool)[1:]
+	*urls = (*urls)[1:]
 
-	if len(*pool) == 0 {
+	if len(*urls) == 0 {
 		return
 	}
 
-	nextURL := (*pool)[0]
+	nextURL := (*urls)[0]
 
-	crawlPage(rawBaseURL, nextURL, pages, pool)
+	crawlPage(rawBaseURL, nextURL, pages, urls)
 }
