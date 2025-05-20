@@ -42,7 +42,7 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 		slog.Error("Normalizing error", "error", err)
 		return
 	}
-
+	fmt.Printf("---- normalized version of the current url: %s\n ----", normCurr)
 	//Check if we've already crawled the rawCurrentURL
 
 	if _, exists := (*pages)[normCurr]; exists {
