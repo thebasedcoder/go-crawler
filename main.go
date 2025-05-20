@@ -66,6 +66,9 @@ func crawlPage(rawBaseURL, rawCurrentURL string, pages *map[string]int, pool *[]
 	}
 	*pool = append(*pool, currPageURLs...)
 	*pool = (*pool)[1:]
+	if len(*pool) == 0 {
+		return
+	}
 	newCurrUrl := (*pool)[0]
 	crawlPage(rawBaseURL, newCurrUrl, pages, pool)
 }
@@ -170,7 +173,7 @@ func main() {
 	pages := make(map[string]int)
 	crawlPage(rawUrl, rawCurrentUrl, &pages, &urls)
 	for key, value := range pages {
-		fmt.Printf("the %s seen %d", key, value)
+		fmt.Printf("the %s seen %d\n", key, value)
 	}
 	slog.Info("finnished execution", "status", "success")
 }
